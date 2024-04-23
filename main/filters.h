@@ -11,6 +11,21 @@ typedef struct
     uint8_t index;
 } fir_filter_t;
 
+typedef struct 
+{
+    float sample_rate;
+    float a0;
+    float a1;
+    float a2;
+    float b0;
+    float b1;
+    float b2;
+    float x1;
+    float x2;
+    float y1;
+    float y2;
+} biquad_lpf_t;
+
 typedef struct
 {
     float sample_rate;
@@ -35,4 +50,9 @@ void notch_filter_init(notch_filter_t *notch);
 void notch_configure(float cf, float bw, notch_filter_t *notch);
 void notch_filter(notch_filter_t *notch, float *value);
 void apply_notch_filter_to_imu(icm42688p_t *imu, notch_filter_t *notch);
+
+void biquad_lpf_configure(float cf, biquad_lpf_t *lowpass);
+void biquad_lpf(biquad_lpf_t *lowpass, float *value);
+void biquad_lpf_array_init(biquad_lpf_t *lpf);
+void apply_biquad_lpf_to_imu(icm42688p_t *imu, biquad_lpf_t *lpf);
 #endif

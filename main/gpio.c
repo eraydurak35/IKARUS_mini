@@ -22,21 +22,21 @@ const ledc_timer_config_t ledc_timer2 =
     .duty_resolution = LEDC_TIMER_10_BIT,
     .freq_hz = 50000,
     .speed_mode = LEDC_HIGH_SPEED_MODE,
-    .timer_num = LEDC_TIMER_1
+    .timer_num = LEDC_TIMER_0
 };
 const ledc_timer_config_t ledc_timer3 = 
 {
     .duty_resolution = LEDC_TIMER_10_BIT,
     .freq_hz = 50000,
     .speed_mode = LEDC_HIGH_SPEED_MODE,
-    .timer_num = LEDC_TIMER_2
+    .timer_num = LEDC_TIMER_0
 };
 const ledc_timer_config_t ledc_timer4 = 
 {
     .duty_resolution = LEDC_TIMER_10_BIT,
     .freq_hz = 50000,
     .speed_mode = LEDC_HIGH_SPEED_MODE,
-    .timer_num = LEDC_TIMER_3
+    .timer_num = LEDC_TIMER_0
 };
 
 // channel configurations
@@ -56,7 +56,7 @@ const ledc_channel_config_t ledc_mot2 =
     .speed_mode = LEDC_HIGH_SPEED_MODE,
     .channel = LEDC_CHANNEL_1,
     .intr_type = LEDC_INTR_DISABLE,
-    .timer_sel = LEDC_TIMER_1,
+    .timer_sel = LEDC_TIMER_0,
     .duty = 0
 };
 
@@ -66,7 +66,7 @@ const ledc_channel_config_t ledc_mot3 =
     .speed_mode = LEDC_HIGH_SPEED_MODE,
     .channel = LEDC_CHANNEL_2,
     .intr_type = LEDC_INTR_DISABLE,
-    .timer_sel = LEDC_TIMER_2,
+    .timer_sel = LEDC_TIMER_0,
     .duty = 0
 };
 
@@ -76,7 +76,7 @@ const ledc_channel_config_t ledc_mot4 =
     .speed_mode = LEDC_HIGH_SPEED_MODE,
     .channel = LEDC_CHANNEL_3,
     .intr_type = LEDC_INTR_DISABLE,
-    .timer_sel = LEDC_TIMER_3,
+    .timer_sel = LEDC_TIMER_0,
     .duty = 0
 };
 
@@ -85,6 +85,26 @@ static void adc_calibration_init(adc_unit_t unit, adc_channel_t channel, adc_att
 /// this function is not thread safe!!
 void gpio_configure()
 {
+    ledc_timer_config_t timer_conf = 
+    {
+        .speed_mode = LEDC_LOW_SPEED_MODE,
+        .duty_resolution    = LEDC_TIMER_10_BIT,
+        .timer_num  = LEDC_TIMER_1,
+        .freq_hz    = 1000
+    };
+	ledc_timer_config(&timer_conf);
+
+	ledc_channel_config_t ledc_conf =
+    {
+        .gpio_num   = BUZZ_PIN,
+        .speed_mode = LEDC_LOW_SPEED_MODE,
+        .channel    = LEDC_CHANNEL_4,
+        .intr_type  = LEDC_INTR_DISABLE,
+        .timer_sel  = LEDC_TIMER_1,
+        .duty       = 0,
+    };
+	ledc_channel_config(&ledc_conf);
+
     ledc_timer_config(&ledc_timer1);
     ledc_timer_config(&ledc_timer2);
     ledc_timer_config(&ledc_timer3);
@@ -111,6 +131,20 @@ void gpio_configure()
     adc_oneshot_config_channel(adc1_handle, VSENS_CHANNEL, &config);
     adc_calibration_init(ADC_UNIT_1, VSENS_CHANNEL, ADC_ATTEN_DB_11);
 
+}
+
+
+void start_beep(uint32_t freq)
+{
+    ledc_set_freq(LEDC_LOW_SPEED_MODE, LEDC_TIMER_1, freq);
+    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_4, 512);
+    ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_4);
+}
+
+void stop_beep()
+{
+    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_4, 0);
+    ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_4);
 }
 
 static void adc_calibration_init(adc_unit_t unit, adc_channel_t channel, adc_atten_t atten)

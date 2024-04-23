@@ -24,7 +24,7 @@ static hmc5883l_t *mag_ptr = NULL;
 static bmp390_t *baro_ptr = NULL;
 static config_t *config_ptr = NULL;
 
-static float acc_z_bias = 0;
+static float acc_up_bias = 0;
 static void get_attitude_heading();
 
 void ahrs_init(config_t *cfg, states_t *sta, icm42688p_t *icm, hmc5883l_t *hmc, bmp390_t *baro)
@@ -162,17 +162,15 @@ void get_earth_frame_accel()
 
     state_ptr->acc_forward_ms2 = imu_ptr->accel_ms2[Y] * rot_matrix[0][0] + imu_ptr->accel_ms2[X] * rot_matrix[1][0] + imu_ptr->accel_ms2[Z] * rot_matrix[2][0];
     state_ptr->acc_right_ms2 = imu_ptr->accel_ms2[Y] * rot_matrix[0][1] + imu_ptr->accel_ms2[X] * rot_matrix[1][1] + imu_ptr->accel_ms2[Z] * rot_matrix[2][1];
-    state_ptr->acc_up_ms2 = (imu_ptr->accel_ms2[Y] * rot_matrix[0][2] + imu_ptr->accel_ms2[X] * rot_matrix[1][2] + imu_ptr->accel_ms2[Z] * rot_matrix[2][2]) - 9.806f;
-
-    //printf("%.1f,%.1f,%.1f\n", state_ptr->acc_forward_ms2, state_ptr->acc_right_ms2, state_ptr->acc_up_ms2);
+    state_ptr->acc_up_ms2 = (imu_ptr->accel_ms2[Y] * rot_matrix[0][2] + imu_ptr->accel_ms2[X] * rot_matrix[1][2] + imu_ptr->accel_ms2[Z] * rot_matrix[2][2]) - 9.906f;
 }
 
 
 
 void predict_altitude_velocity()
 {
-    state_ptr->vel_up_ms += (state_ptr->acc_up_ms2 - acc_z_bias) * 0.002f;
-    state_ptr->altitude_m += state_ptr->vel_up_ms * 0.002f + (state_ptr->acc_up_ms2 - acc_z_bias) * 0.000002f;
+    state_ptr->vel_up_ms += (state_ptr->acc_up_ms2 - acc_up_bias) * 0.002f;
+    state_ptr->altitude_m += state_ptr->vel_up_ms * 0.002f + (state_ptr->acc_up_ms2 - acc_up_bias) * 0.000002f;
 }
 
 void correct_altitude_velocity()
@@ -185,88 +183,88 @@ void correct_altitude_velocity()
     state_ptr->vel_up_ms -= diff_vel * 0.018f;
     state_ptr->altitude_m -= diff_alt * 0.018f;
 
-    acc_z_bias += diff_vel * 0.0008f;
+    acc_up_bias += diff_vel * 0.0008f;
 }
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-// ################################################################################################################################
-/*
-config_t *config = NULL;
-
-void ahrs_init(icm42688p_t *imu, states_t *state, config_t *cfg)
+void calculate_altitude_velocity() // 500Hz
 {
-    float acc_vector = imu->accel_ms2[X] * imu->accel_ms2[X] + imu->accel_ms2[Y] * imu->accel_ms2[Y] + imu->accel_ms2[Z] * imu->accel_ms2[Z];
-    state->pitch_deg = (asinf(imu->accel_ms2[Y] / sqrtf(acc_vector))) * RAD_TO_DEG;
-    state->roll_deg = -atan2f(imu->accel_ms2[X] , imu->accel_ms2[Z]) * RAD_TO_DEG;
-    state->heading_deg = 0;
-    config = cfg;
+    static uint8_t init = 1;
+    static float baro_alt_offset_m;
+    static float baro_altitude_m;
+    static float range_altitude_m = -1;
+    static float prev_baro_altitude_m;
+    float rangefinder_transition_gain;
+    float velocity_accel_ms;
+    static float velocity_ms;
+    static float accel_altitude_m;
+    float baro_velocity_ms;
+    static const float dt = 0.002f;
+    static float upsampled_baro_altitude_m;
+    static float upsampled_range_altitude_m;
+
+    upsampled_baro_altitude_m += (baro_ptr->altitude_m - upsampled_baro_altitude_m) * 0.1f; // updates 50 Hz
+    //upsampled_range_altitude_m += ((range_ptr->range_cm / 100.0f) - upsampled_range_altitude_m) * 0.1f; // updates 100 Hz
+
+    upsampled_range_altitude_m = -1;
+
+    baro_altitude_m = upsampled_baro_altitude_m;
+
+    if (upsampled_range_altitude_m > RANGE_BARO_TRANS_END_ALT)
+        range_altitude_m = -1.0;
+
+    else range_altitude_m = upsampled_range_altitude_m;
+
+    if (range_altitude_m >= 0 && range_altitude_m < RANGE_BARO_TRANS_START_ALT)
+    {
+        baro_alt_offset_m = baro_altitude_m - range_altitude_m;
+        baro_altitude_m = range_altitude_m;
+    }
+    else
+    {
+        baro_altitude_m -= baro_alt_offset_m;
+        if (range_altitude_m > 0)
+        {
+            rangefinder_transition_gain = (RANGE_BARO_TRANS_END_ALT - range_altitude_m) * (RANGE_BARO_TRANS_END_ALT / (RANGE_BARO_TRANS_END_ALT - RANGE_BARO_TRANS_START_ALT));
+            baro_altitude_m = range_altitude_m * rangefinder_transition_gain + baro_altitude_m * (1.0f - rangefinder_transition_gain);
+        }
+    }
+
+    velocity_accel_ms = (state_ptr->acc_up_ms2 - acc_up_bias) * dt;
+    accel_altitude_m += (velocity_accel_ms * 0.5f) * dt + velocity_ms * dt;
+    accel_altitude_m = accel_altitude_m * config_ptr->alt_filter_beta + baro_altitude_m * (1.0f - config_ptr->alt_filter_beta);
+    velocity_ms += velocity_accel_ms;
+
+    if (range_altitude_m >= 0 && range_altitude_m < RANGE_BARO_TRANS_START_ALT)
+    {
+        state_ptr->altitude_m = baro_altitude_m;
+    }
+    else
+    {
+        state_ptr->altitude_m = accel_altitude_m;
+    }
+
+    if (init == 1)
+    {
+        prev_baro_altitude_m = baro_altitude_m;
+        init = 0;
+    }
+
+    baro_velocity_ms = (baro_altitude_m - prev_baro_altitude_m) / dt;
+    prev_baro_altitude_m = baro_altitude_m;
+
+    float velDiff;
+    velDiff = baro_velocity_ms - velocity_ms;
+
+    if (velDiff > 8.0f) velDiff = 8.0f;
+    else if (velDiff < -8.0f) velDiff = -8.0f;
+
+    velocity_ms += velDiff * config_ptr->velz_filter_beta * dt;
+    acc_up_bias -= velDiff * config_ptr->velz_filter_zeta * dt * dt;
+
+    state_ptr->vel_up_ms = velocity_ms;
+
+/*     printf("%.2f, %.2f\n", baro_velocity_ms, state_ptr->vel_up_ms); */
+
 }
-
-void ahrs_predict(icm42688p_t *imu, states_t *state)
-{
-    static const float update_rate = 1000.0f;
-
-    state->pitch_deg += imu->gyro_dps[X] / update_rate;
-    state->roll_deg += imu->gyro_dps[Y] / update_rate;
-    state->heading_deg += -imu->gyro_dps[Z] / update_rate;
-
-    if (state->heading_deg < 0) state->heading_deg += 360.0f;
-    else if (state->heading_deg >= 360.0f) state->heading_deg -= 360.0f;
-
-    float sin_yaw = sinf(-imu->gyro_dps[Z] / update_rate * DEG_TO_RAD);
-
-    state->pitch_deg -= state->roll_deg * sin_yaw;
-    state->roll_deg += state->pitch_deg * sin_yaw;
-
-    state->pitch_dps = imu->gyro_dps[X];
-    state->roll_dps = imu->gyro_dps[Y];
-    state->yaw_dps = -imu->gyro_dps[Z];
-}
-
-
-void ahrs_correct(icm42688p_t *imu, states_t *state)
-{
-    static const float update_rate = 500.0f;
-    static float acc_vector = 0;
-    static float pitch_acc_deg = 0;
-    static float roll_acc_deg = 0;
-    static float diff_pitch = 0;
-    static float diff_roll = 0;
-
-    acc_vector = imu->accel_ms2[X] * imu->accel_ms2[X] + imu->accel_ms2[Y] * imu->accel_ms2[Y] + imu->accel_ms2[Z] * imu->accel_ms2[Z];
-
-    pitch_acc_deg = (asinf(imu->accel_ms2[Y] / sqrtf(acc_vector))) * RAD_TO_DEG;
-    roll_acc_deg = -atan2f(imu->accel_ms2[X] , imu->accel_ms2[Z]) * RAD_TO_DEG;
-
-    if (pitch_acc_deg == NAN) pitch_acc_deg = state->pitch_deg;
-    if (roll_acc_deg == NAN) roll_acc_deg = state->roll_deg;
-
-    diff_pitch = state->pitch_deg - pitch_acc_deg;
-    diff_roll = state->roll_deg - roll_acc_deg;
-
-    state->pitch_deg -= diff_pitch * config->ahrs_filter_beta / update_rate;
-    state->roll_deg -= diff_roll * config->ahrs_filter_beta / update_rate;
-
-    imu->gyro_bias_dps[X] += diff_pitch * config->ahrs_filter_zeta / update_rate;
-    imu->gyro_bias_dps[Y] += diff_roll * config->ahrs_filter_zeta / update_rate;
-
-    state->pitch_dps = imu->gyro_dps[X];
-    state->roll_dps = imu->gyro_dps[Y];
-    state->yaw_dps = -imu->gyro_dps[Z];
-}
-*/
-// ################################################################################################################################

@@ -12,9 +12,18 @@
         "interface/ftdi/esp32_devkitj_v1.cfg",
         "target/esp32.cfg"
     ],
-    "idf.portWin": "COM5",
+    "idf.portWin": "COM13",
     "idf.pythonBinPathWin": "c:\\espidf2024\\tool\\python_env\\idf5.1_py3.11_env\\Scripts\\python.exe",
     "idf.toolsPathWin": "c:\\espidf2024\\tool",
     "C_Cpp.errorSquiggles": "disabled",
-    "idf.flashType": "UART"
+    "idf.flashType": "UART",
+    "files.associations": {
+        "cmath": "c",
+        "complex": "c",
+        "spi_master.h": "c",
+        "state_estimator.h": "c",
+        "pmw3901.h": "c",
+        "icm42688p.h": "c",
+        "hmc5883l.h": "c"
+    }
 }

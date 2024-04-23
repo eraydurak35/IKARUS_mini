@@ -20,7 +20,7 @@ void save_config(config_t *cfg)
         } 
         else 
         {
-            printf("Data written to NVS!\n");
+            printf("Configuration written to NVS!\n");
             nvs_commit(nvm_handle);
         }
 
@@ -29,8 +29,10 @@ void save_config(config_t *cfg)
 }
 
 
+
 void read_config(config_t *cfg)
 {
+
     nvs_handle_t nvm_handle;
     esp_err_t ret = nvs_open("storage", NVS_READWRITE, &nvm_handle);
     if (ret != ESP_OK) 
@@ -44,6 +46,63 @@ void read_config(config_t *cfg)
         if (ret == ESP_OK && required_size == sizeof(config_t)) 
         {
             ret = nvs_get_blob(nvm_handle, "config", cfg, &required_size);
+            if (ret != ESP_OK) 
+            {
+                printf("Error (%s) reading data from NVS!\n", esp_err_to_name(ret));
+            } 
+        } 
+        else 
+        {
+            printf("Error (%s) reading data size from NVS!\n", esp_err_to_name(ret));
+        }
+
+        nvs_close(nvm_handle);
+    }
+}
+
+
+
+void save_mag_cal(float *mg_cal)
+{
+    nvs_handle_t nvm_handle;
+    esp_err_t ret = nvs_open("storage", NVS_READWRITE, &nvm_handle);
+    if (ret != ESP_OK) 
+    {
+        printf("Error (%s) opening NVS handle!\n", esp_err_to_name(ret));
+    } 
+    else 
+    {
+        ret = nvs_set_blob(nvm_handle, "mag_calib_data", mg_cal, 48);
+        if (ret != ESP_OK) 
+        {
+            printf("Error (%s) writing data to NVS!\n", esp_err_to_name(ret));
+        } 
+        else 
+        {
+            printf("Mag calibration written to NVS!\n");
+            nvs_commit(nvm_handle);
+        }
+
+        nvs_close(nvm_handle);
+    }
+}
+
+
+void read_mag_cal(float *mg_cal)
+{
+    nvs_handle_t nvm_handle;
+    esp_err_t ret = nvs_open("storage", NVS_READWRITE, &nvm_handle);
+    if (ret != ESP_OK) 
+    {
+        printf("Error (%s) opening NVS handle!\n", esp_err_to_name(ret));
+    }
+    else
+    {
+        size_t required_size;
+        ret = nvs_get_blob(nvm_handle, "mag_calib_data", NULL, &required_size);
+        if (ret == ESP_OK && required_size == 48) 
+        {
+            ret = nvs_get_blob(nvm_handle, "mag_calib_data", mg_cal, &required_size);
             if (ret != ESP_OK) 
             {
                 printf("Error (%s) reading data from NVS!\n", esp_err_to_name(ret));

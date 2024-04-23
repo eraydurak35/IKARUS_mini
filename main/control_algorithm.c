@@ -4,6 +4,7 @@
 #include "state_estimator.h"
 #include "gpio.h"
 #include "math.h"
+#include "filters.h"
 
 static gamepad_t prv_gamepad;
 static gamepad_t *gamepad_p;
@@ -13,6 +14,8 @@ static states_t *state_p;
 static telemetry_t *telemetry_p;
 static config_t *config_p;
 
+static biquad_lpf_t lpf_pitch_d_term;
+static biquad_lpf_t lpf_roll_d_term;
 
 struct PID
 {
@@ -27,17 +30,15 @@ struct PID
   float errVel_y, errVel_y_prev, velocity_y_ms_prev;
   float errVel_z, errVel_z_prev, velocity_z_ms_prev;
   float altPout, altIout, altDout;
-  float posXPout, posXIout, posXDout;
-  float posYPout, posYIout, posYDout;
+  float posXPout, posXIout;
+  float posYPout, posYIout;
   float acc_z_prev;
 };
 
-const float maxI = 200.0, maxPID = 400.0;
+const float maxI = 200.0f, maxPID = 400.0f;
 const float thr_min = 25, thr_max = 1023;
 float thr_m1 = 0, thr_m2 = 0, thr_m3 = 0, thr_m4 = 0;
 struct PID pid;
-
-
 
 void control_init(gamepad_t *gamepad, telemetry_t *telemetry, flight_t *flight, target_t *target, states_t *state, config_t *config)
 {
@@ -47,6 +48,9 @@ void control_init(gamepad_t *gamepad, telemetry_t *telemetry, flight_t *flight, 
   state_p = state;
   telemetry_p = telemetry;
   config_p = config;
+
+  biquad_lpf_configure(50.0f, &lpf_pitch_d_term);
+  biquad_lpf_configure(50.0f, &lpf_roll_d_term);
 }
 
 void check_flight_mode()
@@ -140,7 +144,6 @@ void arm()
   state_p->altitude_m = 0.0f;
   state_p->vel_up_ms = 0.0f;
 
-  // accz_bias = -0.06;
 
 
   // if altitude hold mode enabled before arming
@@ -210,16 +213,12 @@ void outer_control_loop()
       else if (pid.posYIout < -2.0f) pid.posYIout = -2.0f;
 
 
-      pid.posXDout = -config_p->position_d * (state_p->vel_forward_ms - pid.velocity_x_ms_prev);
-      pid.posYDout = -config_p->position_d * (state_p->vel_right_ms - pid.velocity_y_ms_prev);
-
-
-      target_p->pitch_deg = pid.posXPout + pid.posXIout + pid.posXDout;
+      target_p->pitch_deg = pid.posXPout + pid.posXIout;
       if (target_p->pitch_deg > config_p->max_pitch_angle) target_p->pitch_deg = config_p->max_pitch_angle;
       else if (target_p->pitch_deg < -config_p->max_pitch_angle) target_p->pitch_deg = -config_p->max_pitch_angle;
 
 
-      target_p->roll_deg = pid.posYPout + pid.posYIout + pid.posYDout;
+      target_p->roll_deg = pid.posYPout + pid.posYIout;
       if (target_p->roll_deg > config_p->max_roll_angle) target_p->roll_deg = config_p->max_roll_angle;
       else if (target_p->roll_deg < -config_p->max_roll_angle) target_p->roll_deg = -config_p->max_roll_angle;
 
@@ -307,7 +306,7 @@ void outer_control_loop()
       {
         // Target velocity is calculated from dividing the difference between set altitude and actual altitude with a constant value
         // we always aim 0.1m higher to make sure target is always reached
-        target_p->velocity_z_ms = (target_p->altitude - state_p->altitude_m) / 2.0f;
+        target_p->velocity_z_ms = (target_p->altitude - state_p->altitude_m) * config_p->alt_to_vel_gain;
         //target.velocity_z_ms = applyDeadband(target.velocity_z_ms, 0.05);
       }
       else // Throttle stick not centered, velocity calculated from stick input
@@ -335,9 +334,21 @@ void outer_control_loop()
 void inner_control_loop()
 {
   //↓↓↓↓↓↓↓↓↓↓   CALCULATE CURRENT ERROR   ↓↓↓↓↓↓↓↓↓↓
-  pid.errPitch = target_p->pitch_dps - state_p->pitch_dps;
+  float pitch_dps_corrected;
+  float roll_dps_corrected;
+  float yaw_dps_corrected;
+
+  pitch_dps_corrected = sinf(state_p->roll_deg * DEG_TO_RAD) * target_p->yaw_dps + target_p->pitch_dps;
+  roll_dps_corrected = sinf(-state_p->pitch_deg * DEG_TO_RAD) * target_p->yaw_dps + target_p->roll_dps;
+  yaw_dps_corrected = fabs(cosf(state_p->roll_deg * DEG_TO_RAD)) * fabs(cosf(state_p->pitch_deg * DEG_TO_RAD)) * target_p->yaw_dps;
+
+  pid.errPitch = pitch_dps_corrected - state_p->pitch_dps;
+  pid.errRoll = roll_dps_corrected - state_p->roll_dps;
+  pid.errYaw = yaw_dps_corrected - state_p->yaw_dps;
+
+/*   pid.errPitch = target_p->pitch_dps - state_p->pitch_dps;
   pid.errRoll = target_p->roll_dps - state_p->roll_dps;
-  pid.errYaw = target_p->yaw_dps - state_p->yaw_dps;
+  pid.errYaw = target_p->yaw_dps - state_p->yaw_dps; */
   //↑↑↑↑↑↑↑↑↑↑   CALCULATE CURRENT ERROR   ↑↑↑↑↑↑↑↑↑↑
 
   //↓↓↓↓↓↓↓↓↓↓   PITCH P CALCULATION   ↓↓↓↓↓↓↓↓↓↓
@@ -386,10 +397,12 @@ void inner_control_loop()
 
   //↓↓↓↓↓↓↓↓↓↓   PITCH D CALCULATION   ↓↓↓↓↓↓↓↓↓↓
   pid.pitchDout = -config_p->pitch_d * (state_p->pitch_dps - pid.pitchDegsPrev);
+  biquad_lpf(&lpf_pitch_d_term, &pid.pitchDout);
   //↑↑↑↑↑↑↑↑↑↑   PITCH D CALCULATION   ↑↑↑↑↑↑↑↑↑↑
 
   //↓↓↓↓↓↓↓↓↓↓   ROLL D CALCULATION   ↓↓↓↓↓↓↓↓↓↓
   pid.rollDout = -config_p->roll_d * (state_p->roll_dps - pid.rollDegsPrev);
+  biquad_lpf(&lpf_roll_d_term, &pid.rollDout);
   //↑↑↑↑↑↑↑↑↑↑   ROLL D CALCULATION   ↑↑↑↑↑↑↑↑↑↑
 
   //↓↓↓↓↓↓↓↓↓↓   PITCH PID OUT   ↓↓↓↓↓↓↓↓↓↓
@@ -530,16 +543,4 @@ void inner_control_loop()
 
   set_throttle(thr_m1, thr_m2, thr_m3, thr_m4);
   //↑↑↑↑↑↑↑↑↑↑   OUTPUT TO THE MOTORS   ↑↑↑↑↑↑↑↑↑↑
-
-
-
-
-
-
-
-
-
-
-
-
 }

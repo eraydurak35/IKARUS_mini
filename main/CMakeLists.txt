@@ -1,4 +1,5 @@
 idf_component_register(SRCS 
+"motor_test.c"
 "quaternion.c"
 "nv_storage.c"
 "control_algorithm.c"
@@ -14,4 +15,5 @@ idf_component_register(SRCS
 "spi.c"
 "uart.c"
 "pmw3901.c"
+"buzzer.c"
 INCLUDE_DIRS ".")

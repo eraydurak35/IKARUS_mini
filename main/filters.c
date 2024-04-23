@@ -143,3 +143,54 @@ void apply_notch_filter_to_imu(icm42688p_t *imu, notch_filter_t *notch)
     }
 
 }
+
+void biquad_lpf_configure(float cf, biquad_lpf_t *lowpass)
+{
+    float omega = 2.0f * M_PI * cf / 1000.0f;
+    float sn = sinf(omega);
+    float cs = cosf(omega);
+    float alpha = sn / 2.0f;
+
+    lowpass->b0 = (1.0f - cs) / 2.0f;
+    lowpass->b1 = 1.0f - cs;
+    lowpass->b2 = (1.0f - cs) / 2.0f;
+    lowpass->a0 = 1.0f + alpha;
+    lowpass->a1 = -2.0f * cs;
+    lowpass->a2 = 1.0f - alpha;
+
+    lowpass->b0 /= lowpass->a0;
+    lowpass->b1 /= lowpass->a0;
+    lowpass->b2 /= lowpass->a0;
+    lowpass->a1 /= lowpass->a0;
+    lowpass->a2 /= lowpass->a0;
+}
+
+void biquad_lpf(biquad_lpf_t *lowpass, float *value)
+{
+    static float x = 0;
+    static float y = 0;
+    x = *value;
+    y = lowpass->b0 * x + lowpass->b1 * lowpass->x1 + lowpass->b2 * lowpass->x2 - lowpass->a1 * lowpass->y1 - lowpass->a2 * lowpass->y2;
+    lowpass->x2 = lowpass->x1;
+    lowpass->x1 = x;
+    lowpass->y2 = lowpass->y1;
+    lowpass->y1 = y;
+    *value = y;
+}
+
+void biquad_lpf_array_init(biquad_lpf_t *lpf)
+{
+    for (uint8_t i = 0; i < 6; i++)
+    {
+        biquad_lpf_configure(50.0f, lpf + i);
+    }
+}
+
+void apply_biquad_lpf_to_imu(icm42688p_t *imu, biquad_lpf_t *lpf)
+{
+    for (uint8_t i = 0; i < 3; i++)
+    {
+        biquad_lpf(&lpf[i], &imu->gyro_dps[i]);
+        biquad_lpf(&lpf[i+3], &imu->accel_ms2[i]);
+    }
+}

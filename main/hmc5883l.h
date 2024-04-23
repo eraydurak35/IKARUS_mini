@@ -67,7 +67,7 @@ typedef struct
     float axis[3];
 } hmc5883l_t;
 
-void hmc5883l_setup();
+void hmc5883l_setup(float *mg);
 void hmc5883l_read(hmc5883l_t *hmc);
 
 #endif

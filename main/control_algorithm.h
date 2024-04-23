@@ -6,7 +6,7 @@
 #include "state_estimator.h"
 
 #define MAX_TARGET_THROTTLE 600
-#define IDLE_THROTTLE 120
+#define IDLE_THROTTLE 150
 
 typedef struct
 {

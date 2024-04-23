@@ -153,7 +153,7 @@ static float bmp390_compans_press(uint32_t pressADC, float temp)
   partial_data2 = calib.par_p9 + calib.par_p10 * temp;
   partial_data3 = partial_data1 * partial_data2;
   partial_data4 = partial_data3 + ((float)pressADC * (float)pressADC * (float)pressADC) * calib.par_p11;
-  return ((partial_out1 + partial_out2 + partial_data4) / 100.0);
+  return ((partial_out1 + partial_out2 + partial_data4) / 100.0f);
 }
 
 

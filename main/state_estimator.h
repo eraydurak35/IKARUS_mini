@@ -9,6 +9,8 @@
 
 #define RAD_TO_DEG 57.29577951f
 #define DEG_TO_RAD 0.01745329f
+#define RANGE_BARO_TRANS_START_ALT 4.0f
+#define RANGE_BARO_TRANS_END_ALT 6.0f
 
 typedef struct 
 {
@@ -34,10 +36,6 @@ void ahrs_correct();
 void get_earth_frame_accel();
 void predict_altitude_velocity();
 void correct_altitude_velocity();
-
-
-/* void ahrs_init(icm42688p_t *imu, states_t *state, config_t *cfg);
-void ahrs_predict(icm42688p_t *imu, states_t *state);
-void ahrs_correct(icm42688p_t *imu, states_t *state); */
+void calculate_altitude_velocity();
 
 #endif /*STATE_ESTIMATOR_H*/
