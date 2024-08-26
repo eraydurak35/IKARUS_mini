@@ -1,20 +1,11 @@
 #include <stdio.h>
 #include "hmc5883l.h"
 #include "i2c.h"
+#include "typedefs.h"
 
-static void parse_hmc5883l_data(hmc5883l_t *hmc, uint8_t *buffer);
-static void get_calibrated_result(hmc5883l_t *hmc);
+static void parse_hmc5883l_data(magnetometer_t *hmc, uint8_t *buffer);
+static void get_calibrated_result(magnetometer_t *hmc);
 
-/* static const float mag_bias[3] = 
-{
-    336.194593f, 448.029001f, -78.888176f
-};
-static const float mag_cal_matrix[3][3] = 
-{
-    {0.974868f, 0.012356f, 0.012350f},
-    {0.012356f, 0.946851f, -0.010228f},
-    {0.012350f, -0.010228f, 1.055808f}
-}; */
 
 float *mag_calib_data = NULL;
 
@@ -31,7 +22,7 @@ void hmc5883l_setup(float *mg)
     i2c_write_data(I2C_NUM_0, HMC5883L_ADDR, MODE_REG, HS_I2C_ENABLE << 7 | MEAS_CONTINUOUS);
 }
 
-void hmc5883l_read(hmc5883l_t *hmc)
+void hmc5883l_read(magnetometer_t *hmc)
 {
     static uint8_t buff[6] = {0};
     i2c_read_data(I2C_NUM_0, HMC5883L_ADDR, X_MSB, buff, 6);
@@ -39,7 +30,7 @@ void hmc5883l_read(hmc5883l_t *hmc)
     //get_calibrated_result(hmc);
 }
 
-static void parse_hmc5883l_data(hmc5883l_t *hmc, uint8_t *buffer)
+static void parse_hmc5883l_data(magnetometer_t *hmc, uint8_t *buffer)
 {   
     // X Z Y order
     hmc->axis[0] = (float)((int16_t)(buffer[0] << 8 | buffer[1]));
@@ -47,7 +38,7 @@ static void parse_hmc5883l_data(hmc5883l_t *hmc, uint8_t *buffer)
     hmc->axis[1] = (float)((int16_t)(buffer[4] << 8 | buffer[5]));
 }
 
-static void get_calibrated_result(hmc5883l_t *hmc)
+static void get_calibrated_result(magnetometer_t *hmc)
 {
     static float temp_x = 0;
     static float temp_y = 0;

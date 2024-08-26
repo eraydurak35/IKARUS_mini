@@ -1,5 +1,5 @@
 #include "motor_test.h"
-#include "icm42688p.h"
+#include "typedefs.h"
 #include "gpio.h"
 #include "math.h"
 
@@ -7,7 +7,7 @@ static uint16_t counter = 0;
 static float result[4];
 static float base_noise_level = 0;
 
-uint8_t motor_test(icm42688p_t *data, uint8_t motor_number)
+uint8_t motor_test(imu_t *data, uint8_t motor_number)
 {
 
     if (counter < 100)

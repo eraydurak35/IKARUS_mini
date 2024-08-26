@@ -3,59 +3,48 @@
 #include "spi.h"
 #include <string.h>
 
-
-spi_device_handle_t ICM42688P_spi_handle;
-spi_device_handle_t BMP390_spi_handle;
-
-static void spi_add_ICM42688P_to_bus(int speed, uint8_t cs_pin);
-static void spi_add_BMP390_to_bus(int speed, uint8_t cs_pin);
-
-void spi_master_init(uint8_t MISO, uint8_t MOSI, uint8_t SCL)
+void spi_master_init(uint8_t miso_pin_num, uint8_t mosi_pin_num, uint8_t clk_pin_num)
 {
     // SPI bus tanımı
     spi_bus_config_t buscfg={
-        .miso_io_num=MISO,
-        .mosi_io_num=MOSI,
-        .sclk_io_num=SCL,
+        .miso_io_num=miso_pin_num,
+        .mosi_io_num=mosi_pin_num,
+        .sclk_io_num=clk_pin_num,
         .quadwp_io_num=-1,
         .quadhd_io_num=-1
     };
 
-    spi_bus_initialize(VSPI_HOST, &buscfg, SPI_DMA_CH_AUTO);
-
-    spi_add_ICM42688P_to_bus(SPI_FREQ, ICM42688P_CS_PIN);
-    spi_add_BMP390_to_bus(SPI_FREQ, BMP390_CS_PIN);
+    spi_bus_initialize(SPI2_HOST, &buscfg, SPI_DMA_CH_AUTO);
 }
 
-
-
-static void spi_add_ICM42688P_to_bus(int speed, uint8_t cs_pin)
+void spi_add_device_to_bus(spi_device_handle_t *dev, int cs_pin_num, int speed)
 {
     spi_device_interface_config_t devcfg={
         .clock_speed_hz=speed,
         .mode=0,
-        .spics_io_num=cs_pin,
+        .spics_io_num=cs_pin_num,
         .queue_size=1
     };
 
-    spi_bus_add_device(VSPI_HOST, &devcfg, &ICM42688P_spi_handle);
+    spi_bus_add_device(SPI2_HOST, &devcfg, dev);
 }
 
-
-static void spi_add_BMP390_to_bus(int speed, uint8_t cs_pin)
+uint8_t spi_read_byte(spi_device_handle_t dev, uint8_t reg_addr)
 {
-    spi_device_interface_config_t devcfg={
-        .clock_speed_hz=speed,
-        .mode=0,
-        .spics_io_num=cs_pin,
-        .queue_size=1
-    };
-
-    spi_bus_add_device(VSPI_HOST, &devcfg, &BMP390_spi_handle);
+    reg_addr = reg_addr | 0x80;
+    spi_transaction_t t;
+    memset(&t, 0, sizeof(t));
+    t.length = 16;
+    t.rxlength = 8;
+    t.tx_buffer = &reg_addr;
+    uint8_t buf[2];
+    memset(buf, 0, 2);
+    t.rx_buffer = buf;
+    spi_device_polling_transmit(dev, &t);
+    return buf[1];
 }
 
-
-void spi_read_ICM42688P(uint8_t reg_addr, uint8_t *reg_data, uint32_t len)
+void spi_read_bytes(spi_device_handle_t dev, uint8_t reg_addr, uint8_t *txrx_buffer, size_t len)
 {
     reg_addr = reg_addr | 0x80;
     spi_transaction_t t;
@@ -66,77 +55,19 @@ void spi_read_ICM42688P(uint8_t reg_addr, uint8_t *reg_data, uint32_t len)
     uint8_t buf[len+1];
     memset(buf, 0, len+1);
     t.rx_buffer = buf;
-    spi_device_polling_transmit(ICM42688P_spi_handle, &t);
-    memmove(reg_data, &buf[1], len);
+    spi_device_polling_transmit(dev, &t);
+    memmove(txrx_buffer, &buf[1], len);
 }
 
-
-
-void spi_write_ICM42688P(uint8_t reg_addr, const uint8_t *reg_data, uint32_t len)
+void spi_write_byte(spi_device_handle_t dev, uint8_t reg_addr, uint8_t data)
 {
     reg_addr = reg_addr & 0x7F;
     spi_transaction_t t;
     memset(&t, 0, sizeof(t));
-    t.length = 8*len+8;
-    uint8_t buf[len+1];
+    t.length = 16;
+    uint8_t buf[2];
     buf[0] = reg_addr;
-    memcpy(&buf[1], reg_data, len);
+    buf[1] = data;
     t.tx_buffer = buf;
-    spi_device_polling_transmit(ICM42688P_spi_handle, &t);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-void spi_read_BMP390(uint8_t reg_addr, uint8_t *reg_data, uint32_t len)
-{
-    reg_addr = reg_addr | 0x80;
-    spi_transaction_t t;
-    memset(&t, 0, sizeof(t));
-    t.length = 8+8*len;
-    t.rxlength = 8*len;
-    t.tx_buffer = &reg_addr;
-    uint8_t buf[len+1];
-    memset(buf, 0, len+1);
-    t.rx_buffer = buf;
-    spi_device_polling_transmit(BMP390_spi_handle, &t);
-    memmove(reg_data, &buf[1], len);
-}
-
-
-
-void spi_write_BMP390(uint8_t reg_addr, const uint8_t *reg_data, uint32_t len)
-{
-    reg_addr = reg_addr & 0x7F;
-    spi_transaction_t t;
-    memset(&t, 0, sizeof(t));
-    t.length = 8*len+8;
-    uint8_t buf[len+1];
-    buf[0] = reg_addr;
-    memcpy(&buf[1], reg_data, len);
-    t.tx_buffer = buf;
-    spi_device_polling_transmit(BMP390_spi_handle, &t);
+    spi_device_polling_transmit(dev, &t);
 }

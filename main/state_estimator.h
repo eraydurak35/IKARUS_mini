@@ -2,8 +2,6 @@
 #define STATE_ESTIMATOR_H
 
 #include <stdio.h>
-#include "icm42688p.h"
-#include "hmc5883l.h"
 #include "bmp390.h"
 #include "comminication.h"
 
@@ -30,7 +28,7 @@ typedef struct
 } states_t;
 
 
-void ahrs_init(config_t *cfg, states_t *sta, icm42688p_t *icm, hmc5883l_t *hmc, bmp390_t *baro);
+void ahrs_init(config_t *cfg, states_t *sta, imu_t *icm, magnetometer_t *hmc, bmp390_t *baro);
 void ahrs_predict();
 void ahrs_correct();
 void get_earth_frame_accel();

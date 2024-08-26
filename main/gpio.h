@@ -4,23 +4,20 @@
 #include "esp_adc/adc_cali.h"
 #include "esp_adc/adc_cali_scheme.h"
 
-#define BUZZER_PIN GPIO_NUM_15
-#define GREEN_PIN GPIO_NUM_27
-#define RED_PIN GPIO_NUM_4
-#define BLUE_PIN GPIO_NUM_14
-#define BUZZ_PIN 15
 
-#define VSENS_CHANNEL ADC_CHANNEL_6 //GPIO_NUM_34
+#define VSENS_CHANNEL ADC_CHANNEL_4 //GPIO_NUM_5
 
-#define MOT1_PIN GPIO_NUM_26
-#define MOT2_PIN GPIO_NUM_25
-#define MOT3_PIN GPIO_NUM_16
-#define MOT4_PIN GPIO_NUM_17
+#define MOT1_PIN 16
+#define MOT2_PIN 4
+#define MOT3_PIN 38
+#define MOT4_PIN 1
+#define LED_PIN 2
+#define BUTTON_PIN 0
 
 
 void gpio_configure();
 void set_throttle(uint16_t mot1_thr, uint16_t mot2_thr, uint16_t mot3_thr, uint16_t mot4_thr);
 float get_bat_volt();
-void start_beep(uint32_t freq);
-void stop_beep();
+void led_set_brightness(uint8_t percent);
+void led_breathe(uint8_t speed);
 #endif

@@ -23,5 +23,8 @@ void quat_to_euler(quat_t *q_ptr, vector_t *att);
 void get_attitude_from_accel(vector_t *vec, quat_t *q_result);
 void get_heading_from_mag(vector_t *vec, quat_t *q_result);
 quat_t get_quat_product(quat_t *q1, quat_t *q2);
+float angle_between_vectors(vector_t *vec1, vector_t *vec2);
+float magnitude(vector_t *vec);
+float dot_product(vector_t *vec1, vector_t *vec2);
 
 #endif /*QUATERNION_H*/

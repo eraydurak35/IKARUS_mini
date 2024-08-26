@@ -13,6 +13,27 @@ vector_t cross_product(vector_t *vec1, vector_t *vec2)
     return result;
 }
 
+// get the dot product of 3 by 3 vectors
+float dot_product(vector_t *vec1, vector_t *vec2)
+{
+    return vec1->x * vec2->x + vec1->y * vec2->y + vec1->z * vec2->z;
+}
+
+// returns magnitude of a vector
+float magnitude(vector_t *vec)
+{
+    return sqrtf(vec->x * vec->x + vec->y * vec->y + vec->z * vec->z);
+}
+
+// returns angle between two vectors in degrees
+float angle_between_vectors(vector_t *vec1, vector_t *vec2)
+{
+    float dot = dot_product(vec1, vec2);
+    float mag1 = magnitude(vec1);
+    float mag2 = magnitude(vec2);
+    return acosf(dot / (mag1 * mag2)) * RAD_TO_DEG;
+}
+
 // get quaternion derivative from gyro radians per second vector
 // q_ptr -> pointer to current attitude
 // vect -> pointer to gyro vector (radians per second)

@@ -3,12 +3,12 @@
 #include "driver/i2c.h"
 
 
-void i2c_master_init(i2c_port_t port_num, uint8_t SDA, uint8_t SCL, uint32_t speed, uint8_t gpio_pull_up)
+void i2c_master_init(i2c_port_t port_num, uint8_t sda_pin_num, uint8_t scl_pin_num, uint32_t speed, uint8_t gpio_pull_up)
 {
     i2c_config_t i2c_config = {
         .mode = I2C_MODE_MASTER,
-        .sda_io_num = SDA,
-        .scl_io_num = SCL,
+        .sda_io_num = sda_pin_num,
+        .scl_io_num = scl_pin_num,
         .sda_pullup_en = gpio_pull_up,
         .scl_pullup_en = gpio_pull_up,
         .master.clk_speed = speed

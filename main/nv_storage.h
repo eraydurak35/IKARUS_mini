@@ -3,10 +3,15 @@
 
 #include "comminication.h"
 
-void read_config(config_t *cfg);
-void save_config(config_t *cfg);
-void save_mag_cal(float *mg_cal);
-void read_mag_cal(float *mg_cal);
+enum Storage
+{
+    CONFIG_DATA,
+    ACCEL_CALIB_DATA,
+    MAG_CALIB_DATA
+};
+
+uint8_t storage_save(void *ptr, enum Storage type);
+uint8_t storage_read(void *ptr, enum Storage type);
 
 
 #endif

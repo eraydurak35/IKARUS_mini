@@ -2,6 +2,7 @@
 #define HMC5883L_H
 
 #include <stdio.h>
+#include "typedefs.h"
 
 #define HMC5883L_ADDR 0x1E
 #define CONFIG_REG_A 0x0
@@ -62,12 +63,7 @@
 
 #define X_MSB 0x03
 
-typedef struct
-{
-    float axis[3];
-} hmc5883l_t;
-
 void hmc5883l_setup(float *mg);
-void hmc5883l_read(hmc5883l_t *hmc);
+void hmc5883l_read(magnetometer_t *hmc);
 
 #endif

@@ -69,11 +69,12 @@ void comm_send_conf(config_t *conf)
 
 void comm_send_wp()
 {
-    uint8_t buffer[sizeof(waypoint.latitude) + sizeof(waypoint.longitude) + sizeof(waypoint.altitude) + 1];
+    uint8_t buffer[sizeof(waypoint.latitude) + sizeof(waypoint.longitude) + sizeof(waypoint.altitude) + sizeof(waypoint.end_of_mission_behaviour) + 1];
     buffer[0] = WP_HEADER;
     memcpy(buffer + 1, waypoint.latitude, sizeof(waypoint.latitude));
     memcpy(buffer + 1 + sizeof(waypoint.latitude), waypoint.longitude, sizeof(waypoint.longitude));
     memcpy(buffer + 1 + sizeof(waypoint.latitude) + sizeof(waypoint.longitude), waypoint.altitude, sizeof(waypoint.altitude));
+    buffer[226] = waypoint.end_of_mission_behaviour;
     esp_now_send(ground_station_mac_address, buffer, sizeof(buffer));
 }
 
@@ -109,12 +110,13 @@ static void espnow_receive_cb(const esp_now_recv_info_t *recv_info, const uint8_
         }
     }
     
-    else if (data[0] == 0xFD && len == 226)
+    else if (data[0] == 0xFD && len == 227)
     {
         *new_data_recv_flag = 2;
         memcpy(waypoint.latitude, data + 1, sizeof(waypoint.latitude));
         memcpy(waypoint.longitude, data + sizeof(waypoint.longitude) + 1, sizeof(waypoint.longitude));
         memcpy(waypoint.altitude, data + (sizeof(waypoint.longitude) * 2) + 1, sizeof(waypoint.altitude));
+        waypoint.end_of_mission_behaviour = data[226];
 
         for (uint8_t i = 0; i < 25; i++)
         {

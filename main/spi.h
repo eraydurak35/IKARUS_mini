@@ -2,22 +2,20 @@
 #define SPI_H
 
 #include <stdio.h>
+#include "driver/spi_master.h"
 
-#define SCL_PIN  GPIO_NUM_18
-#define MISO_PIN GPIO_NUM_19
-#define MOSI_PIN GPIO_NUM_23
-#define ICM42688P_CS_PIN 5
-#define BMP390_CS_PIN 13
+#define CLK_PIN  13
+#define MISO_PIN 11
+#define MOSI_PIN 10
+#define ICM42688P_CS_PIN 12
+#define BMP390_CS_PIN 14
 #define SPI_FREQ 10000000
 
 
-
-void spi_master_init(uint8_t MISO, uint8_t MOSI, uint8_t SCL);
-void spi_read_ICM42688P(uint8_t reg_addr, uint8_t *reg_data, uint32_t len);
-void spi_write_ICM42688P(uint8_t reg_addr, const uint8_t *reg_data, uint32_t len);
-
-void spi_read_BMP390(uint8_t reg_addr, uint8_t *reg_data, uint32_t len);
-void spi_write_BMP390(uint8_t reg_addr, const uint8_t *reg_data, uint32_t len);
-
+void spi_master_init(uint8_t miso_pin_num, uint8_t mosi_pin_num, uint8_t clk_pin_num);
+void spi_add_device_to_bus(spi_device_handle_t *dev, int cs_pin_num, int speed);
+uint8_t spi_read_byte(spi_device_handle_t dev, uint8_t reg_addr);
+void spi_read_bytes(spi_device_handle_t dev, uint8_t reg_addr, uint8_t *txrx_buffer, size_t len);
+void spi_write_byte(spi_device_handle_t dev, uint8_t reg_addr, uint8_t data);
 
 #endif

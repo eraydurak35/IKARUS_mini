@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include "filters.h"
-#include "icm42688p.h"
 #include "math.h"
+#include "string.h"
+#include "typedefs.h"
 
 
 static const float fir_gain[7] = 
@@ -14,6 +15,28 @@ static const float fir_gain[7] =
   0.142856919905681196f,
   0.142386908288827163f
 };
+
+int cmpfunc(const void *a, const void *b);
+
+int cmpfunc(const void *a, const void *b)
+{
+    float fa = *(const float *)a;
+    float fb = *(const float *)b;
+    return (fa > fb) - (fa < fb);
+}
+
+float median_filter(median_filter_t *filter, float new_data)
+{
+    for (uint8_t i = 0; i < filter->size - 1; i++)
+    {
+        filter->buffer[i] = filter->buffer[i + 1];
+    }
+    filter->buffer[filter->size - 1] = new_data;
+    memcpy(filter->sorted_buffer, filter->buffer, filter->size * sizeof(float));
+
+    qsort(filter->sorted_buffer, filter->size, sizeof(float), cmpfunc);
+    return filter->sorted_buffer[filter->size / 2];
+}
 
 
 void fir_filter_init(fir_filter_t *fir)
@@ -67,7 +90,7 @@ void fir_filter_custom_gain(fir_filter_t *fir, const float *gain, float *value)
 }
 
 
-void apply_fir_filter_to_imu(icm42688p_t *imu, fir_filter_t *fir)
+void apply_fir_filter_to_imu(imu_t *imu, fir_filter_t *fir)
 {
     for (uint8_t i = 0; i < 3; i++)
     {
@@ -131,7 +154,7 @@ void notch_filter(notch_filter_t *notch, float *value)
 
 
 
-void apply_notch_filter_to_imu(icm42688p_t *imu, notch_filter_t *notch)
+void apply_notch_filter_to_imu(imu_t *imu, notch_filter_t *notch)
 {
     for (uint8_t i = 0; i < 3; ++i) 
     {
@@ -186,7 +209,7 @@ void biquad_lpf_array_init(biquad_lpf_t *lpf)
     }
 }
 
-void apply_biquad_lpf_to_imu(icm42688p_t *imu, biquad_lpf_t *lpf)
+void apply_biquad_lpf_to_imu(imu_t *imu, biquad_lpf_t *lpf)
 {
     for (uint8_t i = 0; i < 3; i++)
     {
