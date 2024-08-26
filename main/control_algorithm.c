@@ -82,7 +82,6 @@ void control_init(gamepad_t *gamepad, telemetry_small_t *telemetry, flight_t *fl
 
 void check_flight_mode()
 {
-
     if (gamepad_p->analog_LX > 108 && gamepad_p->analog_LY < -108 && !flight_p->arm_status && telemetry_p->rssi < 0) arm();
     else if ((gamepad_p->analog_LX < -108 && gamepad_p->analog_LY < -108 && flight_p->arm_status) || telemetry_p->rssi == 0) disarm();
 
@@ -141,23 +140,10 @@ static void arm()
     pid.errRollPrev = 0;
     pid.errYawPrev = 0;
 
-    // baro.ground_pressure = baro.pressure;
-    // baro.init_temp = baro.temperature;
     state_p->altitude_m = 0.0f;
     state_p->vel_up_ms = 0.0f;
 
     arm_heading = state_p->heading_deg;
-
-    // if altitude hold mode enabled before arming
-    // then when armed, automatically takeoff pre determined altitude
-    /*   flight.takeoff_status = false;
-        if (flight.alt_hold_status)
-        {
-        flight.takeoff_status = true;
-        pid.altIout = IDLE_THROTTLE;
-        }
-    */
-    //telemetry_p->arm_status = 1;
     flight_p->arm_status = 1;
 }
 
@@ -241,20 +227,6 @@ static void outer_control_loop(float dt)
                 pitch_flip_integrator_deg = 0;
                 roll_flip_integrator_deg = 0;
                 flip_status = 1;
-
-/*                 flip_vec.pitch = -gamepad_p->analog_RY;
-                flip_vec.roll = gamepad_p->analog_RX;
-
-                float norm = sqrtf((flip_vec.pitch * flip_vec.pitch) + (flip_vec.roll * flip_vec.roll));
-
-                flip_vec.pitch /= norm;
-                flip_vec.roll /= norm;
-
-                flip_vec.pitch *= 370.0f;
-                flip_vec.roll *= 370.0f;
-
-                flip_status = 1; */
-
             }
         }
         
@@ -276,8 +248,6 @@ static void outer_control_loop(float dt)
             roll_flip_integrator_deg += state_p->roll_dps * inner_dt;
             pitch_flip_integrator_deg += state_p->pitch_dps * inner_dt;
 
-            //printf("p: %.1f   r: %.1f\n", pitch_flip_integrator_deg, roll_flip_integrator_deg);
-
 
             target_p->roll_dps = (flip_vec.roll - roll_flip_integrator_deg) * 10.0f;
             if (target_p->roll_dps > 700.0f) target_p->roll_dps = 700.0f;
@@ -287,15 +257,6 @@ static void outer_control_loop(float dt)
             target_p->pitch_dps = (flip_vec.pitch - pitch_flip_integrator_deg) * 10.0f;
             if (target_p->pitch_dps > 700.0f) target_p->pitch_dps = 700.0f;
             else if (target_p->pitch_dps < -700.0f) target_p->pitch_dps = -700.0f;
-
-/*             target_p->roll_dps = (270.0f - roll_flip_integrator_deg) * 10.0f;
-            if (target_p->roll_dps > 700.0f) target_p->roll_dps = 700.0f;
-            else if (target_p->roll_dps < -700.0f) target_p->roll_dps = -700.0f;
-
-
-            target_p->pitch_dps = (-270.0f - pitch_flip_integrator_deg) * 10.0f;
-            if (target_p->pitch_dps > 700.0f) target_p->pitch_dps = 700.0f;
-            else if (target_p->pitch_dps < -700.0f) target_p->pitch_dps = -700.0f; */
 
             float vec_len = sqrtf((pitch_flip_integrator_deg * pitch_flip_integrator_deg) + (roll_flip_integrator_deg * roll_flip_integrator_deg));
             if (vec_len >= 365.0f)
@@ -313,8 +274,6 @@ static void outer_control_loop(float dt)
                 flip_status = 0;
             }
         }
-
-        //printf("%d\n", flip_status);
 
         if (flip_status == 0 || flip_status == 3) // flip is not ongoing
         {
@@ -377,16 +336,6 @@ static void outer_control_loop(float dt)
 
         if (telemetry_p->is_alt_hold_on == 1)
         {
-/*             if (flight_p->takeoff_status == 1)
-            {
-                pid.altIout += (config_p->hover_throttle - IDLE_THROTTLE) / 100.0f;
-
-                if (pid.altIout >= config_p->hover_throttle)
-                {
-                    target_p->altitude = config_p->takeoff_altitude;
-                    flight_p->takeoff_status = 0;
-                }
-            } */
             ////////////////////////    Altitude Velocity Controller    /////////////////////////////////
             // Throttle controls the altitude velocity
             if (gamepad_p->analog_LY < 30 && gamepad_p->analog_LY > -30) // Throttle stick is centered, velocity calculated from setpoint error
@@ -418,10 +367,6 @@ static void outer_control_loop(float dt)
             }
 
         }
-
-        //printf("tpr: %.1f  trr: %.1f  intr: %.1f  st: %d\n", target_p->pitch_dps, target_p->roll_dps, roll_flip_integrator_deg, flip_status);
-        //printf("%.0f\n", roll_flip_integrator_deg);
-
         inner_dt = 0;
     }
 
@@ -441,10 +386,6 @@ static void inner_control_loop()
     pid.errPitch = pitch_dps_corrected - state_p->pitch_dps;
     pid.errRoll = roll_dps_corrected - state_p->roll_dps;
     pid.errYaw = yaw_dps_corrected - state_p->yaw_dps;
-
-    /*   pid.errPitch = target_p->pitch_dps - state_p->pitch_dps;
-    pid.errRoll = target_p->roll_dps - state_p->roll_dps;
-    pid.errYaw = target_p->yaw_dps - state_p->yaw_dps; */
     //↑↑↑↑↑↑↑↑↑↑   CALCULATE CURRENT ERROR   ↑↑↑↑↑↑↑↑↑↑
 
     //↓↓↓↓↓↓↓↓↓↓   PITCH P CALCULATION   ↓↓↓↓↓↓↓↓↓↓
@@ -563,12 +504,9 @@ static void inner_control_loop()
         //↑↑↑↑↑↑↑↑↑↑   ALTITUDE I CALCULATION   ↑↑↑↑↑↑↑↑↑↑
 
         //↓↓↓↓↓↓↓↓↓↓   ALTITUDE D CALCULATION   ↓↓↓↓↓↓↓↓↓↓
-        //pid.altDout = -config.altitude_d * (states.velocity_z_ms - pid.velocity_z_ms_prev);
         pid.altDout = -config_p->alt_d * (state_p->acc_up_ms2 + pid.acc_z_prev);
         pid.acc_z_prev = state_p->acc_up_ms2;
         //↑↑↑↑↑↑↑↑↑↑   ALTITUDE D CALCULATION   ↑↑↑↑↑↑↑↑↑↑
-
-        //Altitude_D_Term_Filter();
 
         //↓↓↓↓↓↓↓↓↓↓   ALTITUDE PID OUT   ↓↓↓↓↓↓↓↓↓↓
         target_p->throttle = pid.altPout + pid.altIout + pid.altDout;
@@ -578,7 +516,6 @@ static void inner_control_loop()
 
         //↓↓↓↓↓↓↓↓↓↓   HOLD LAST ERROR FOR NEXT CALCULATION   ↓↓↓↓↓↓↓↓↓↓
         pid.errVel_z_prev = pid.errVel_z;
-        //pid.velocity_z_ms_prev = state_p->vel_up_ms;
         //↑↑↑↑↑↑↑↑↑↑   HOLD LAST ERROR FOR NEXT CALCULATION   ↑↑↑↑↑↑↑↑↑↑
         
     }
@@ -595,13 +532,8 @@ static void inner_control_loop()
     //if (battery_compans_throttle < 0.0f) battery_compans_throttle = 0.0f;
     //comp_target_thr += battery_compans_throttle;
 
-
-
     //float cosAngAbs = cosf(fabs(state_p->pitch_deg) * DEG_TO_RAD) * cosf(fabs(state_p->roll_deg) * DEG_TO_RAD);
     //if (cosAngAbs != 0) comp_target_thr += ((1.0f / cosAngAbs) - 1.0f) * comp_target_thr;
-
-
-
 
     //↓↓↓↓↓↓↓↓↓↓   MOTOR 1 (LEFT BOTTOM)   ↓↓↓↓↓↓↓↓↓↓
     thr_m1 = comp_target_thr - pid.pitchPIDout + pid.rollPIDout + pid.yawPIout;
@@ -628,18 +560,7 @@ static void inner_control_loop()
     //↑↑↑↑↑↑↑↑↑↑   MOTOR 4 (RIGHT TOP)   ↑↑↑↑↑↑↑↑↑↑
 
     //↓↓↓↓↓↓↓↓↓↓   OUTPUT TO THE MOTORS   ↓↓↓↓↓↓↓↓↓↓
-/*     float yaw_jump_reduce_thr = fabs(state_p->yaw_dps) * config_p->mag_declination_deg;
-    thr_m1 -= yaw_jump_reduce_thr;
-    thr_m2 -= yaw_jump_reduce_thr;
-    thr_m3 -= yaw_jump_reduce_thr;
-    thr_m4 -= yaw_jump_reduce_thr;
-
-    if (thr_m1 < thr_min) thr_m1 = thr_min;
-    if (thr_m2 < thr_min) thr_m2 = thr_min;
-    if (thr_m3 < thr_min) thr_m3 = thr_min;
-    if (thr_m4 < thr_min) thr_m4 = thr_min; */
     set_throttle(thr_m1, thr_m2, thr_m3, thr_m4);
-    //set_throttle(100, 0, 0, 0);
     //↑↑↑↑↑↑↑↑↑↑   OUTPUT TO THE MOTORS   ↑↑↑↑↑↑↑↑↑↑
 }
 
