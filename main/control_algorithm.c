@@ -294,12 +294,12 @@ static void outer_control_loop(float dt)
         if (flip_status == 0 || flip_status == 3)
         {
             /////////////////////   Pitch Rate Controller   ///////////////////////
-            target_p->pitch_dps = (target_p->pitch_deg - state_p->pitch_deg) * config_p->pitch_rate_scale;
+            target_p->pitch_dps = (target_p->pitch_deg - state_p->pitch_deg) * config_p->pitch_rate_scal;
             if (target_p->pitch_dps > config_p->max_pitch_rate) target_p->pitch_dps = config_p->max_pitch_rate;
             else if (target_p->pitch_dps < -config_p->max_pitch_rate) target_p->pitch_dps = -config_p->max_pitch_rate;
 
             /////////////////////   Roll Rate Controller   ///////////////////////
-            target_p->roll_dps = (target_p->roll_deg - state_p->roll_deg) * config_p->roll_rate_scale;
+            target_p->roll_dps = (target_p->roll_deg - state_p->roll_deg) * config_p->roll_rate_scal;
             if (target_p->roll_dps > config_p->max_roll_rate) target_p->roll_dps = config_p->max_roll_rate;
             else if (target_p->roll_dps < -config_p->max_roll_rate) target_p->roll_dps = -config_p->max_roll_rate;
 
@@ -348,7 +348,7 @@ static void outer_control_loop(float dt)
             else // Throttle stick not centered, velocity calculated from stick input
             {
                 // Calculate the desired altitude velocity from raw stick input
-                target_p->velocity_z_ms = (gamepad_p->analog_LY / 120.0f) * config_p->max_vertical_velocity;
+                target_p->velocity_z_ms = (gamepad_p->analog_LY / 120.0f) * config_p->max_vert_vel;
                 // we dont use altitude setpoint if the stick is not centered
                 // but we want to set our setpoint when the stick is in middle
                 // so that when we let go of the stick, craft stays at the altitude we let go

@@ -163,57 +163,51 @@ typedef struct
     float pitch_p;
     float pitch_i;
     float pitch_d;
-
     float roll_p;
     float roll_i;
     float roll_d;
-
     float yaw_p;
     float yaw_i;
-
     float pos_p;
     float pos_i;
-
     float alt_p;
     float alt_i;
     float alt_d;
-
     float max_pitch_angle;
     float max_roll_angle;
     float max_pitch_rate;
     float max_roll_rate;
     float max_yaw_rate;
-
-    float pitch_rate_scale;
-    float roll_rate_scale;
+    float pitch_rate_scal;
+    float roll_rate_scal;
     float yaw_rate_scale;
-    float max_vertical_velocity;
-    float max_horizontal_velocity;
-
-    float voltage_sens_gain;
-    float takeoff_altitude;
+    float max_vert_vel;
+    float max_horiz_vel;
+    float voltage_gain;
+    float takeoff_alt;
     float hover_throttle;
     float notch_1_freq;
-    float notch_1_bandwidth;
+    float notch_1_bndwdht;
     float notch_2_freq;
-    float notch_2_bandwidth;
-
+    float notch_2_bndwdht;
     float lpf_cutoff_hz;
-
-    float ahrs_filter_beta;
-    float ahrs_filter_zeta;
-    float alt_filter_beta;
-    float mag_declination_deg;
-    float velz_filter_beta;
-    float velz_filter_zeta;
-    float velxy_filter_beta;
-
+    float ahrs_filt_beta;
+    float ahrs_filt_zeta;
+    float alt_filt_beta;
+    float mag_declin_deg;
+    float velz_filt_beta;
+    float velz_filt_zeta;
+    float velxy_filt_beta;
     float alt_vel_scale;
     float wp_threshold_cm;
-    float wp_heading_correct_gain;
-    float wp_dist_to_vel_gain;
+    float wp_hdg_cor_gain;
+    float wp_dis_vel_gain;
 } config_t;
 
+typedef struct {
+    const char* name;
+    float* value;
+} key_value_t;
 
 typedef struct
 {
@@ -230,6 +224,5 @@ typedef struct
     float offset[3];
     float scale[3];
 } calibration_t;
-
 
 #endif

@@ -64,6 +64,7 @@ void icm42688p_read(imu_t *imu)
     uint8_t data_read[14];
     spi_read_bytes(icm42688p_handle, TEMP_DATA1, data_read, 14);
     parse_icm42688p_data(imu, data_read);
+    //printf("%.2f,%.2f,%.2f\n", imu->gyro_dps[X],imu->gyro_dps[Y],imu->gyro_dps[Z]);
     getCalibratedResults(imu);
 }
 
@@ -77,8 +78,6 @@ static void parse_icm42688p_data(imu_t *imu, uint8_t *buff)
     imu->gyro_dps[X] = (int16_t)(buff[8] << 8 | buff[9]) * GYR_GAIN;
     imu->gyro_dps[Y] = (int16_t)(buff[10] << 8 | buff[11]) * GYR_GAIN;
     imu->gyro_dps[Z] = (int16_t)(buff[12] << 8 | buff[13]) * GYR_GAIN;
-
-/*     printf("%.2f\n", imu->gyro_dps[X]); */
 }
 
 static void getCalibratedResults(imu_t *imu)

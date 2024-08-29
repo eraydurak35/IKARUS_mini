@@ -1,6 +1,6 @@
 #include "nv_storage.h"
 #include "comminication.h"
-
+#include "typedefs.h"
 
 uint8_t storage_save(void *ptr, enum Storage type)
 {

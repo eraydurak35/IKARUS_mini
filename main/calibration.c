@@ -256,6 +256,8 @@ uint8_t gyro_calibration(imu_t *imu)
             imu->gyro_bias_dps[X] = sum_x / 1000.0f;
             imu->gyro_bias_dps[Y] = sum_y / 1000.0f;
             imu->gyro_bias_dps[Z] = sum_z / 1000.0f;
+
+            printf("Offset --> X: %.4f  Y: %.4f  Z: %.4f\n\n", imu->gyro_bias_dps[X], imu->gyro_bias_dps[Y], imu->gyro_bias_dps[Z]);
             return 1;
         }
     }

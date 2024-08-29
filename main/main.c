@@ -28,6 +28,7 @@
 // ||############################||
 // ||      CUSTOM LIBRARIES      ||
 // ||############################||
+#include "command_line_interface.h"
 #include "control_algorithm.h"
 #include "state_estimator.h"
 #include "calibration.h"
@@ -45,7 +46,6 @@
 #include "spi.h"
 #include "i2c.h"
 
-
 static flight_t flight;
 static target_t target;
 static config_t config;
@@ -62,7 +62,6 @@ static calibration_t mag_calibration_data;
 static calibration_t accel_calibration_data;
 static telemetry_small_t telem_small;
 static biquad_lpf_t lpf[6];
-
 
 void IRAM_ATTR timer1_callback(void *arg)
 {
@@ -99,7 +98,7 @@ void task_1(void *pvParameters)
 
     ahrs_init(&config, &states, &imu, &mag, &barometer);
     control_init(&gamepad, &telem_small, &flight, &target, &states, &config);
-    telem_small.battery_voltage = get_bat_volt() * config.voltage_sens_gain;
+    telem_small.battery_voltage = get_bat_volt() * config.voltage_gain;
 
     while (1)
     {
@@ -107,8 +106,11 @@ void task_1(void *pvParameters)
         {
 
             icm42688p_read(&imu);
+            
             apply_biquad_lpf_to_imu(&imu, lpf);
+            /* printf("%.2f,%.2f,%.2f\n", imu.gyro_dps[X],imu.gyro_dps[Y],imu.gyro_dps[Z]); */
             ahrs_predict();
+            //printf("%.2f,%.2f,%.2f\n", states.pitch_deg,states.roll_deg,states.heading_deg);
 
             counter1++;
             counter2++;
@@ -133,7 +135,7 @@ void task_1(void *pvParameters)
             if (counter3 >= 100) // 10Hz
             {
                 counter3 = 0;
-                telem_small.battery_voltage = (get_bat_volt() * config.voltage_sens_gain) * 0.01f + telem_small.battery_voltage * 0.99f;
+                telem_small.battery_voltage = (get_bat_volt() * config.voltage_gain) * 0.01f + telem_small.battery_voltage * 0.99f;
                 telem_small.pitch = states.pitch_deg;
                 telem_small.roll = states.roll_deg;
                 telem_small.heading = states.heading_deg;
@@ -156,6 +158,7 @@ void task_1(void *pvParameters)
 
 void task_2(void *pvParameters)
 {
+    // Todo: sensörün who am i değerini oku cevap gelirse devam et
     i2c_master_init(I2C_NUM_0, SDA1, SCL1, 400000, GPIO_PULLUP_DISABLE);
     qmc5883l_setup(&mag_calibration_data);
 
@@ -285,6 +288,7 @@ void app_main()
 {
     // Non Volatile Storage birimini başlatır.
     nvs_flash_init();
+    cli_begin(&config, &accel_calibration_data, &mag_calibration_data, &imu);
     // Varsa önceden kaydedilmiş kalibrasyon verilerini ve konfigürasyonu oku
     // Yoksa default değerler ile başlat
     if (!storage_read(&mag_calibration_data, MAG_CALIB_DATA)) reset_calibration_data(&mag_calibration_data);

@@ -63,9 +63,9 @@ void ahrs_init(config_t *cfg, states_t *sta, imu_t *icm, magnetometer_t *hmc, bm
     acc_vec.y = imu_ptr->accel_ms2[X];
     acc_vec.z = imu_ptr->accel_ms2[Z];
 
-    mag_vec.x = mag_ptr->axis[X];
+/*     mag_vec.x = mag_ptr->axis[X];
     mag_vec.y = mag_ptr->axis[Y];
-    mag_vec.z = mag_ptr->axis[Z];
+    mag_vec.z = mag_ptr->axis[Z]; */
 
     norm_vector(&acc_vec);
     norm_vector(&mag_vec);
@@ -95,9 +95,9 @@ void ahrs_predict()
     gyr_vec.y = imu_ptr->gyro_dps[X] * DEG_TO_RAD;
     gyr_vec.z = -imu_ptr->gyro_dps[Z] * DEG_TO_RAD;
 
-    gyr_vec.x -= (config_ptr->ahrs_filter_beta * err.x);
-    gyr_vec.y -= (config_ptr->ahrs_filter_beta * err.y);
-    gyr_vec.z -= (config_ptr->ahrs_filter_beta * err.z);
+    gyr_vec.x -= (config_ptr->ahrs_filt_beta * err.x);
+    gyr_vec.y -= (config_ptr->ahrs_filt_beta * err.y);
+    gyr_vec.z -= (config_ptr->ahrs_filt_beta * err.z);
 
     get_quat_deriv(&q, &gyr_vec, &q_dot);
 
@@ -161,8 +161,8 @@ void ahrs_correct()
     err.y = err_acc.y + err_mag.y;
     err.z = err_acc.z + err_mag.z;
 
-    imu_ptr->gyro_bias_dps[Y] += err.x * config_ptr->ahrs_filter_zeta;
-    imu_ptr->gyro_bias_dps[X] += err.y * config_ptr->ahrs_filter_zeta;
+    imu_ptr->gyro_bias_dps[Y] += err.x * config_ptr->ahrs_filt_zeta;
+    imu_ptr->gyro_bias_dps[X] += err.y * config_ptr->ahrs_filt_zeta;
     //imu_ptr->gyro_bias_dps[Z] -= err.z * config_ptr->ahrs_filter_zeta;
 
     get_attitude_heading();
@@ -324,7 +324,7 @@ void calculate_altitude_velocity() // 500Hz
 
     velocity_accel_ms = (state_ptr->acc_up_ms2 - acc_up_bias) * dt;
     accel_altitude_m += (velocity_accel_ms * 0.5f) * dt + velocity_ms * dt;
-    accel_altitude_m = accel_altitude_m * config_ptr->alt_filter_beta + baro_altitude_m * (1.0f - config_ptr->alt_filter_beta);
+    accel_altitude_m = accel_altitude_m * config_ptr->alt_filt_beta + baro_altitude_m * (1.0f - config_ptr->alt_filt_beta);
     velocity_ms += velocity_accel_ms;
 
     if (range_altitude_m >= 0 && range_altitude_m < RANGE_BARO_TRANS_START_ALT)
@@ -351,8 +351,8 @@ void calculate_altitude_velocity() // 500Hz
     if (velDiff > 8.0f) velDiff = 8.0f;
     else if (velDiff < -8.0f) velDiff = -8.0f;
 
-    velocity_ms += velDiff * config_ptr->velz_filter_beta * dt;
-    acc_up_bias -= velDiff * config_ptr->velz_filter_zeta * dt * dt;
+    velocity_ms += velDiff * config_ptr->velz_filt_beta * dt;
+    acc_up_bias -= velDiff * config_ptr->velz_filt_zeta * dt * dt;
 
     state_ptr->vel_up_ms = velocity_ms;
 

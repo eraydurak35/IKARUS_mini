@@ -15,4 +15,6 @@ idf_component_register(SRCS
 "web_comm.c"
 "qmc5883l.c"
 "calibration.c"
+"command_line_interface.c"
+"defaults.c"
 INCLUDE_DIRS ".")
